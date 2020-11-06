@@ -1,23 +1,48 @@
 from inspect import cleandoc
 from calendar import monthrange
 from datetime import datetime
-from textwrap import indent
+from textwrap import indent, dedent, wrap
 import conducto as co
 import os
 
 
+def pipeline() -> co.Serial:
+
+    # defer node definition until the first node runs
+    root = co.Lazy(nodes_for_this_month)
+
+    # conducto installs the dependencies into its image
+    root.image = co.Image(
+        copy_url="https://github.com/MatrixManAtYrService/sandboxen",
+        copy_branch="master",
+        path_map={".": "./fortune_witherror"},
+        reqs_py=["conducto", "sh"],
+        reqs_packages=["fortune"],
+    )
+
+    return root
+
+
 def nodes_for_this_month() -> co.Parallel:
     """
-    This function runs in the container for the generate step.
-    It returns a node to be executed as part of the execute step.
+    Nodes defined as Lazy become two nodes in a pipeline instance:
+
+    - Generate
+    - Execute
+
+    The Generate node calls this function.
+    The Execute node runs whichever node is returned by this function.
     """
 
-    # linux utility: fortune
-    # python library: sh
-    # The above are not dependencies for launching this pipeline, but they
-    # must be installed in the image to be referenced by this function.
+    # delete to fix
+    raise Exception("Some exceptions just want to watch the world burn")
 
-    os.environ['PATH'] = ':'.join([os.environ['PATH'], "/usr/games"])
+    # The image parameters that appear in `reqs_py` and `reqs_packages` are
+    # depenencies of this function. But the pipeline launcher doesn't need them.
+    #
+    # Import them inside the function to reduce external dependency.
+
+    os.environ["PATH"] = ":".join([os.environ["PATH"], "/usr/games"])
     from sh import fortune
 
     now = datetime.now()
@@ -26,13 +51,14 @@ def nodes_for_this_month() -> co.Parallel:
 
         date = f"{now.year}-{now.month}-{i + 1}"
 
-        fortune_str = fortune()
+        fortune_str = indent(fortune().stdout.decode(), prefix=16 * " ")
 
         cmd = cleandoc(
             f"""
             echo "About {date} the spirits say:"
             cat << EOF
-            {indent(fortune_str, prefix='            ')}
+
+                {fortune_str[16:]}
             EOF"""
         )
 
@@ -40,19 +66,6 @@ def nodes_for_this_month() -> co.Parallel:
 
     return parent
 
-# copy_dir places this file in the image so that
-# the above function can be found when the Lazy node runs
-img = co.Image(copy_dir=".",
-               reqs_py=["conducto", "sh"],
-               reqs_packages=["fortune"])
-
-
-def make_pipeline() -> co.Serial:
-    root = co.Serial(image=img)
-    root['fortune'] = co.Lazy(nodes_for_this_month)
-    return root
-
 
 if __name__ == "__main__":
-    co.Image.share_directory("fortune", os.path.dirname(__file__))
-    co.main(default=make_pipeline)
+    co.main(default=pipeline)

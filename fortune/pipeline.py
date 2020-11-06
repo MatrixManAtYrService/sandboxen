@@ -6,7 +6,7 @@ import conducto as co
 import os
 
 
-def nodes_for_this_month():
+def nodes_for_this_month() -> co.Parallel:
     """
     This function runs in the container for the generate step.
     It returns a node to be executed as part of the execute step.

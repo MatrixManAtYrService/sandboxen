@@ -14,7 +14,7 @@ def nodes_for_this_month() -> co.Parallel:
 
     # linux utility: fortune
     # python library: sh
-    # The above not a dependencies for launching this pipeline, but they
+    # The above are not dependencies for launching this pipeline, but they
     # must be installed in the image to be referenced by this function.
 
     os.environ['PATH'] = ':'.join([os.environ['PATH'], "/usr/games"])
@@ -24,7 +24,7 @@ def nodes_for_this_month() -> co.Parallel:
     parent = co.Parallel()
     for i in range(monthrange(now.year, now.month)[1]):
 
-        date = f"{now.year}-{now.month}-{i}"
+        date = f"{now.year}-{now.month}-{i + 1}"
 
         fortune_str = fortune()
 

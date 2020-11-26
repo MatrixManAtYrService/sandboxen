@@ -1,6 +1,6 @@
 import conducto as co
 
-img = co.Image(dockerfile="./Dockerfile", copy_repo=True)
+img = co.Image(dockerfile="./Dockerfile", copy_dir=".")
 
 
 def main() -> co.Serial:
@@ -13,4 +13,5 @@ def main() -> co.Serial:
 
 
 if __name__ == "__main__":
+    co.Image.share_directory("redis_test", ".")
     co.main(default=main)

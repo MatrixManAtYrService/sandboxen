@@ -16,6 +16,8 @@ GATTACA
 def main() -> co.Serial:
 
     with co.Serial(image=img) as root_node:
+
+        # download and decompress the suspicious data
         with co.Serial(name="setup"):
             co.Exec(f"""
                     wget -O {data}/genes.fasta.gz \
@@ -31,25 +33,29 @@ def main() -> co.Serial:
 
 
         with co.Parallel(name="experiment"):
+
+            # use it as-is
             co.Exec(f"""
                     makeblastdb -in {data}/genome.fna -dbtype nucl -out tempdb
-                    blastn -query {data}/genes.fna -outfmt 5 -db tempdb > /dev/null 2> >(tee errors)
+                    blastn -query {data}/genes.fna -outfmt 5 -db tempdb 1> /dev/null 2>errors
 
                     # fail if previous command wrote to stderr
-                    [[ $(wc -l < errors) - ge 1) ]] && exit 1 || exit 0
+                    cat errors >&2
+                    [[ $(wc -l < errors) -ge 1 ]] && exit 1 || exit 0
                     """,
                     name="has errors")
 
+            # use it after replacing the unicode escape sequences with 'BADCHAR'
             co.Exec(f"""
                     # fix bad characters for YMR156C, YCL018W, YGR257C, and YDR412W
-                    cat {data}/genes.fna \
-                        | sed 's/&#/BADCHAR/g' > {data}/fixed/fna
+                    cat {data}/genes.fna | sed 's/&#/BADCHAR/g' > {data}/fixed.fna
 
                     makeblastdb -in {data}/genome.fna -dbtype nucl -out tempdb
-                    blastn -query {data}/fixed.fna -outfmt 5 -db tempdb > /dev/null 2> >(tee errors)
+                    blastn -query {data}/fixed.fna -outfmt 5 -db tempdb 1> /dev/null 2>errors
 
                     # fail if previous command wrote to stderr
-                    [[ $(wc -l < errors) - ge 1) ]] && exit 1 || exit 0
+                    cat errors >&2
+                    [[ $(wc -l < errors) -ge 1 ]] && exit 1 || exit 0
                     """,
                     name="fixed")
     return root_node
